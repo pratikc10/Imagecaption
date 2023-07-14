@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>ChatGPT Frontend Example</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"
+  integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
+<style>
+  /* CSS styling code from previous examples */
+
+  body {
+    font-family: Arial, sans-serif;
+    background-image: linear-gradient(to bottom, #f6f6f6, #e9e9e9);
+    margin: 0;
+    padding: 0;
+    background-image: url('/static/wall.jpg')
+  }
+
+  .container {
+    margin: 0 auto;
+    padding: 20px;
+    /* background-color: #fff; */
+    box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.1);
+    border-radius: 5px;
+    background-image: url('/static/wall.jpg');
+
+  }
+
+  h1 {
+    text-align: center;
+    color: #fff;
+    margin-top: 0;
+    padding-top: 10px;
+  }
+
+  .chat-container {
+    height: 400px;
+    overflow-y: scroll;
+    border: 1px solid #ccc;
+    padding: 10px;
+    background-color: #fff;
+  }
+
+  .user-message {
+    color: #0d6efd;
+    /* background-color: #def3ff; */
+    padding: 8px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    text-align: right;
+  }
+
+  .assistant-message {
+    color: #198754;
+    /* background-color: #e6ffed; */
+    padding: 8px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    text-align: left;
+  }
+
+  .input-container {
+    display: flex;
+    margin-top: 10px;
+  }
+
+  #user-input {
+    flex-grow: 1;
+    padding: 5px;
+    border-radius: 3px;
+    border: 1px solid #ccc;
+  }
+
+  #send-btn {
+    margin-left: 10px;
+    padding: 5px 10px;
+    background-color: #0d6efd;
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+
+  #send-btn:hover {
+    background-color: #0b5ed7;
+  }
+
+  .file-input {
+    display: none;
+  }
+
+  .upload-btn {
+    padding: 5px 10px;
+    background-color: #f5f5f5;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+
+  .upload-btn:hover {
+    background-color: #636264;
+  }
+
+  .user-image {
+    width: 160px;
+    height: 100px;
+    object-fit: contain;
+  }
+
+  .imagecontainer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .alignEnd {
+    justify-content: flex-end;
+  }
+
+  .alignStart {
+    justify-content: flex-start;
+  }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <!-- HTML code from previous examples -->
+  <h1>TextIM Chat</h1>
+  <div class="chat-container" id="chat-container">
+    <div>
+      <p class="assistant-message">
+        <i class="bi-chat-dots-fill">
+        </i>
+          assistant :- Hi I am here to help you with Image context and Question related image , 
+          for image description click on upload file and upload the image and click on send button
+          and If you want ask question related image  so write the question in input text and send with image.
+      </p>
+    </div>
+  </div>
+  <div class="input-container">
+    <input type="text" id="user-input" placeholder="Type your message">
+    <input type="file" id="file-input" class="form-control file-input" >
+    <label for="file-input" id="file-name" class="btn upload-btn mx-2"><i class="bi bi-upload"></i></label>
+    <button id="send-btn" class="btn btn-primary"><i class="bi bi-send-fill"></i></button>
+  </div>
+</div>
+
+<script>
+  const chatContainer = document.getElementById("chat-container");
+  const userInputField = document.getElementById("user-input");
+  const sendButton = document.getElementById("send-btn");
+  const fileInput = document.getElementById("file-input");
+  const filelable = document.getElementById('file-name')
+  const formData = new FormData();
+  const uploadicon = `<i class="bi bi-upload"></i>`
+  const images = []
+  let imageSrc;
+  let loading;
+  // Function to handle file upload
+  function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    console.log(file)
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      imageSrc = e.target.result;
+      // addImageToChat(imageSrc, "user");
+      // console.log(imageSrc)
+      filelable.innerHTML = `${uploadicon} ${file.name}`
+
+
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // Function to add an image message to the chat container
+  function addImageToChat(imageSrc, sender) {
+    loading=false;
+    filelable.innerHTML = `${uploadicon}`
+    const imagecontainer = document.createElement('div')
+    imagecontainer.setAttribute('class', `imagecontainer ${sender === "User" ? 'alignEnd' : 'alignStart'}`)
+    imagecontainer.innerHTML = `<div class='d-flex'><span>${sender == 'User' ? '<i class="bi bi-person-fill mx-2"></i>' : '<i class="bi bi-chat-dots-fill mx-2"></i>'}</span><img src=${imageSrc} class=${sender == "User" ? 'user-image' : 'assistant-image'}></img></div>`
+    chatContainer.appendChild(imagecontainer);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+
+
+  }
+
+  // Function to send user input and image to the Flask backend
+  function sendMessage() {
+    const userInput = userInputField.value.trim();
+
+    
+    if (!userInput) {
+      if (formData.has('message')) {
+        formData.set('message',userInput)
+      }else{
+        formData.append('message', userInput);
+      }
+      if (fileInput.files.length > 0) {
+        const imageFile = fileInput.files[0];
+
+        let presentimage;
+        if (images.includes(imageFile)) {
+          presentimage = images.find((fileitem) => fileitem == imageFile)
+        } else {
+          images.push(imageFile)
+          addImageToChat(imageSrc, "User")
+
+        }
+
+        if (!presentimage) {
+          if (formData.has('image')) {
+            formData.set('image',imageFile)
+          }else{
+            formData.append("image", imageFile);
+          }
+
+        } else {
+
+          formData.set('image', presentimage)
+        }
+
+      }
+      sendRequest(formData)
+    } else {
+
+      addMessageToChat(userInput, "User");
+      if (formData.has('message')) {
+        formData.set('message',userInput)
+      }else{
+        formData.append('message', userInput);
+      }
+      
+      if (fileInput.files.length > 0) {
+
+        const imageFile = fileInput.files[0];
+
+        let presentimage;
+        if (images.includes(imageFile)) {
+          presentimage = images.find((fileitem) => fileitem == imageFile)
+        } else {
+          addImageToChat(imageSrc, "User")
+          images.push(imageFile)
+        }
+        if (!presentimage) {
+          if (formData.has('image')) {
+            formData.set('image',imageFile)
+          }else{
+            formData.append("image", imageFile);
+          }
+          
+        } else {
+          formData.set('image', presentimage)
+        }
+        sendRequest(formData)
+      }else{
+        // formData.delete('image')
+        sendRequest(formData)
+      }
+      
+    }
+
+    userInputField.value = "";
+    fileInput.value = "";
+    userInputField.focus();
+  }
+
+  // Function to add a message to the chat container
+  function addMessageToChat(message, sender) {
+
+    const messageElement = document.createElement("div");
+
+    // messageElement.innerText = sender + " :- " + message;
+    messageElement.innerHTML = `<p class=${sender === "User" ? "user-message" : "assistant-message"}>${sender == 'User' ? '<i class="bi bi-person-fill mx-2"></i>' : '<i class="bi bi-chat-dots-fill mx-2"></i>'}${sender} :- ${message} </p>`
+    chatContainer.appendChild(messageElement);
+
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+  }
+
+  // Attach event listeners
+  fileInput.addEventListener("change", handleFileUpload);
+  sendButton.addEventListener("click", sendMessage);
+  userInputField.addEventListener("keydown", event => {
+    if (event.key === "Enter") {
+      sendMessage();
+    }
+  });
+  async function sendRequest(data) {
+    let id=new Date().getTime()
+    let loader=document.createElement('div');
+    loader.setAttribute('class','spinner-border')
+    loader.setAttribute('id',`loader${id}`)
+    loader.setAttribute('role','status')
+    loader.innerHTML=`<span class="visually-hidden">Loading...</span>`
+    
+    chatContainer.appendChild(loader)
+    const res = await fetch('/sendmessage', {
+      method: "POST",
+      body: data
+    })
+    const returneddata = await res.json()
+    if (res.status != 200) {
+      console.log("error")
+    }
+    chatContainer.removeChild(loader)
+    await addMessageToChat(returneddata, "assistant")
+  }
+
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+  integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz"
+  crossorigin="anonymous"></script>
+</body>
+
+</html>
